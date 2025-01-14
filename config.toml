@@ -1,2 +1,3 @@
 [udpserver]
     address="35.159.152.17:5000"
+    heartBeatInterval = 5

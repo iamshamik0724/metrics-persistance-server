@@ -5,11 +5,12 @@ import (
 )
 
 type Config struct {
-	UdpServer *UdpServer
+	UdpServer *UdpServer `toml:"udpserver"`
 }
 
 type UdpServer struct {
-	Address string
+	Address           string `toml:"address"`
+	HeartBeatInterval int    `toml:"heartBeatInterval"`
 }
 
 // LoadConfig loads the configuration from a TOML file

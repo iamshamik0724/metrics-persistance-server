@@ -2,12 +2,15 @@ package message
 
 import (
 	"encoding/binary"
+	"math/rand"
 	"time"
 )
 
 func CreateMessage(messageType string, payload []byte) []byte {
 
-	message := make([]byte, 14)
+	const baseSize = 14
+
+	message := make([]byte, baseSize+len(payload))
 
 	//Add version
 	message[0] = 0x01
@@ -23,22 +26,17 @@ func CreateMessage(messageType string, payload []byte) []byte {
 	}
 
 	//add seq
-	//ToDO: random sequence generation
-	message[2] = 0x01
-	message[3] = 0x03
-	message[4] = 0x03
-	message[5] = 0x03
+	sequence := rand.Uint32()
+	binary.BigEndian.PutUint32(message[2:6], sequence)
 
 	// add time
-	currentTime := time.Now()
-	seconds := currentTime.Unix()
-	nanoseconds := currentTime.Nanosecond()
-	timestamp := (int64(seconds) << 32) | int64(nanoseconds)
-	var timestampBytes [8]byte
-	binary.BigEndian.PutUint64(timestampBytes[:], uint64(timestamp))
-	copy(message[6:], timestampBytes[:])
+	timestamp := time.Now().UnixNano()
+	binary.BigEndian.PutUint64(message[6:14], uint64(timestamp))
 
 	//add payload
-	copy(message[14:], payload[:])
+	if len(payload) > 0 {
+		copy(message[baseSize:], payload)
+	}
+
 	return message
 }
