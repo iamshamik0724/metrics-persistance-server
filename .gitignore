@@ -1,0 +1,44 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Output of the `go build` command
+*.out
+
+# Vendor dependencies (if not committed)
+vendor/
+
+# Go test binary
+*.test
+
+# Logs and debugging files
+*.log
+*.tmp
+
+# IDE and editor settings
+.idea/
+.vscode/
+*.swp
+
+# Dependency directories
+node_modules/
+dist/
+
+# Go-specific files
+*.mod
+*.sum
+
+# Coverage files
+*.cover
+coverage.out
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+*.orig
+
+# macOS system files
+.DS_Store
