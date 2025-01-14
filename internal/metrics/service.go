@@ -21,7 +21,7 @@ func NewApiMetricService(repo repo.IRepository) *Service {
 
 func (s *Service) RecordMetric(message *message.Message) error {
 	metric := &repo.ApiMetric{
-		Time:         time.Unix(0, int64(message.Timestamp)),
+		Time:         time.Unix(int64(message.Timestamp), 0),
 		Route:        message.Payload.Route,
 		Method:       message.Payload.Method,
 		StatusCode:   message.Payload.StatusCode,

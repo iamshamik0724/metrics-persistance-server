@@ -88,16 +88,25 @@ func parseMetricsData(payload []byte) (*Payload, error) {
 	method := GetMethod(payload[10])
 
 	// The rest of the payload is the route
-	route := string(payload[11:])
+	route := payload[11:]
+	routeString := string(trimNullBytes(route))
 
 	// Convert responseTime from uint64 to float64 (assuming it's a raw double precision float in binary)
 	// You can use any conversion method based on how the float is encoded
 	respTime := math.Float64frombits(responseTime)
 
 	return &Payload{
-		Route:        route,
+		Route:        routeString,
 		Method:       method,
 		StatusCode:   statusCode,
 		ResponseTime: respTime,
 	}, nil
+}
+
+func trimNullBytes(route []byte) []byte {
+	i := len(route) - 1
+	for i >= 0 && route[i] == 0x00 {
+		i--
+	}
+	return route[:i+1]
 }
