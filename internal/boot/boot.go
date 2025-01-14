@@ -6,6 +6,8 @@ import (
 	"log"
 	"metrics-persistance-server/config"
 	"metrics-persistance-server/internal/message"
+	"metrics-persistance-server/internal/metrics"
+	"metrics-persistance-server/internal/metrics/repo"
 	"net"
 	"time"
 
@@ -18,7 +20,7 @@ func InitilizeDb() {}
 func InitializeUdpConnection(config *config.Config, ctx context.Context) error {
 
 	//Initialize DB
-	_, dbErr := InitializeDb(config)
+	db, dbErr := InitializeDb(config)
 
 	if dbErr != nil {
 		log.Println("Error Initializing database")
@@ -55,8 +57,14 @@ func InitializeUdpConnection(config *config.Config, ctx context.Context) error {
 	// Initialize heartbeat
 	go startHeartbeat(ctx, conn, config.UdpServer.HeartBeatInterval)
 
+	//Initialize repo
+	apiMetricRepo := repo.NewApiMetricRepository(db)
+
+	//Initialize Service
+	apiMetricService := metrics.NewApiMetricService(apiMetricRepo)
+
 	//Initialize consumer channel
-	go startConsumerChannel(ctx, conn)
+	go startConsumerChannel(ctx, conn, apiMetricService)
 
 	return nil
 
@@ -91,7 +99,7 @@ func startHeartbeat(ctx context.Context, conn *net.UDPConn, heartBeatInterval in
 	}
 }
 
-func startConsumerChannel(ctx context.Context, conn *net.UDPConn) {
+func startConsumerChannel(ctx context.Context, conn *net.UDPConn, metricService metrics.IService) {
 	log.Println("Starting consumer channel...")
 	for {
 		select {
@@ -99,7 +107,6 @@ func startConsumerChannel(ctx context.Context, conn *net.UDPConn) {
 			log.Println("Stopping consumer channel...")
 			return
 		default:
-			// Example: Read from UDP and process messages
 			buffer := make([]byte, 1024)
 			n, addr, err := conn.ReadFromUDP(buffer)
 			if err != nil {
@@ -113,6 +120,10 @@ func startConsumerChannel(ctx context.Context, conn *net.UDPConn) {
 			}
 			log.Println(message)
 			log.Println(message.Payload)
+			recordMetricError := metricService.RecordMetric(message)
+			if recordMetricError != nil {
+				log.Println("Error while recording metric message. Message: ", message, "Payload:", message.Payload)
+			}
 		}
 	}
 }
