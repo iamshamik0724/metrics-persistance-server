@@ -94,7 +94,13 @@ func startConsumerChannel(ctx context.Context, conn *net.UDPConn) {
 				log.Printf("Error reading UDP message: %v\n", err)
 				continue
 			}
-			log.Printf("Received message from %v: %s\n", addr, string(buffer[:n]))
+			log.Printf("Received message from %v: %s %d %s\n", addr, string(buffer[:n]), len(buffer), string(buffer))
+			message, errMessage := message.ParseMessage(buffer)
+			if errMessage != nil {
+				log.Printf("Error while parsing message")
+			}
+			log.Println(message)
+			log.Println(message.Payload)
 		}
 	}
 }
