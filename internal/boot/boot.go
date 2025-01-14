@@ -2,16 +2,28 @@ package boot
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"metrics-persistance-server/config"
 	"metrics-persistance-server/internal/message"
 	"net"
 	"time"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func InitilizeDb() {}
 
 func InitializeUdpConnection(config *config.Config, ctx context.Context) error {
+
+	//Initialize DB
+	_, dbErr := InitializeDb(config)
+
+	if dbErr != nil {
+		log.Println("Error Initializing database")
+		return dbErr
+	}
 
 	// Initialize UDP
 	udpAddr, err := net.ResolveUDPAddr("udp", config.UdpServer.Address)
@@ -103,4 +115,16 @@ func startConsumerChannel(ctx context.Context, conn *net.UDPConn) {
 			log.Println(message.Payload)
 		}
 	}
+}
+
+func InitializeDb(config *config.Config) (*gorm.DB, error) {
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
+		config.DatabaseConfig.Host, config.DatabaseConfig.User, config.DatabaseConfig.Password, config.DatabaseConfig.Database, config.DatabaseConfig.Port)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Printf("Error opening database connection: %v\n", err)
+		return nil, err
+	}
+	log.Println("Database initialized successfully")
+	return db, nil
 }

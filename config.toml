@@ -1,3 +1,10 @@
 [udpserver]
     address="35.159.152.17:5000"
     heartBeatInterval = 5
+
+[database]
+    host="localhost"
+    port=5432
+    user="metrics_persistance_server_user"
+    password="password123"
+    database="metrics_persistance_server"
