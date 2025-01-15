@@ -88,7 +88,7 @@ func Initialize(config *config.Config, ctx context.Context, stopChannel chan str
 	router.GET("/metrics", metricsHandler.GetMetrics)
 
 	srv := &http.Server{
-		Addr:    ":8085",
+		Addr:    config.Server.Port,
 		Handler: router,
 	}
 

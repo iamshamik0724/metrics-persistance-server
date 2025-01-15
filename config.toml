@@ -8,3 +8,6 @@
     user="metrics_persistance_server_user"
     password="password123"
     database="metrics_persistance_server"
+
+[server]
+    port=":8085"

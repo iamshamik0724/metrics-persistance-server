@@ -7,6 +7,7 @@ import (
 type Config struct {
 	UdpServer      *UdpServer      `toml:"udpserver"`
 	DatabaseConfig *DatabaseConfig `toml:"database"`
+	Server         *Server         `toml:"server"`
 }
 
 type UdpServer struct {
@@ -20,6 +21,10 @@ type DatabaseConfig struct {
 	User     string `toml:"user"`
 	Password string `toml:"password"`
 	Database string `toml:"database"`
+}
+
+type Server struct {
+	Port string `toml:"port"`
 }
 
 // LoadConfig loads the configuration from a TOML file

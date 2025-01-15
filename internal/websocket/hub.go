@@ -75,7 +75,14 @@ func (h *Hub) SendMessage(message []byte) {
 }
 
 func (h *Hub) SendMetricsMessage(msg *message.Message) {
-	data, err := json.Marshal(msg)
+	metricMessage := &MetricsBroadcastMessage{
+		Route:        msg.Payload.Route,
+		Method:       msg.Payload.Method,
+		Timestamp:    msg.Timestamp,
+		ResponseTime: msg.Payload.ResponseTime,
+		Status:       msg.Payload.StatusCode,
+	}
+	data, err := json.Marshal(metricMessage)
 	if err != nil {
 		log.Println("Error marshaling message:", err)
 		return

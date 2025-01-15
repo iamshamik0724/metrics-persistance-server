@@ -1,10 +1,12 @@
 package message
 
+import "time"
+
 type Message struct {
 	Version        string
 	MessageType    string
 	SequenceNumber int
-	Timestamp      uint64
+	Timestamp      time.Time
 	Payload        *Payload
 }
 

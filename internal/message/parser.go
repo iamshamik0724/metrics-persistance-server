@@ -46,6 +46,7 @@ func ParseMessage(buffer []byte) (*Message, error) {
 	messageType := GetMessageType(buffer[1])
 	seqNum := int(binary.BigEndian.Uint32(buffer[2:6]))
 	timestamp := binary.BigEndian.Uint64(buffer[6:14])
+	metricTime := time.Unix(int64(timestamp), 0)
 	payload := buffer[14:]
 	messagePayload, parseErr := ParsePayload(payload, messageType)
 	if parseErr != nil {
@@ -58,7 +59,7 @@ func ParseMessage(buffer []byte) (*Message, error) {
 		MessageType:    messageType,
 		SequenceNumber: seqNum,
 		Payload:        messagePayload,
-		Timestamp:      timestamp,
+		Timestamp:      metricTime,
 	}, nil
 }
 
