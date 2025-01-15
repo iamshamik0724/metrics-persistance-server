@@ -11,6 +11,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -66,6 +67,17 @@ func InitializeUdpConnection(config *config.Config, ctx context.Context) error {
 	//Initialize consumer channel
 	go startConsumerChannel(ctx, conn, apiMetricService)
 
+	//Initialize Gin Router
+	router := gin.Default()
+
+	//Initialize handlers
+	metricsHandler := metrics.NewHandler(apiMetricService)
+
+	//Initialize Routes
+	router.GET("/metrics", metricsHandler.GetMetrics)
+
+	router.Run(":8085")
+
 	return nil
 
 }
@@ -108,18 +120,18 @@ func startConsumerChannel(ctx context.Context, conn *net.UDPConn, metricService 
 			return
 		default:
 			buffer := make([]byte, 1024)
-			n, addr, err := conn.ReadFromUDP(buffer)
+			_, _, err := conn.ReadFromUDP(buffer)
 			if err != nil {
 				log.Printf("Error reading UDP message: %v\n", err)
 				continue
 			}
-			log.Printf("Received message from %v: %s %d %s\n", addr, string(buffer[:n]), len(buffer), string(buffer))
+			//log.Printf("Received message from %v: %s %d %s\n", addr, string(buffer[:n]), len(buffer), string(buffer))
 			message, errMessage := message.ParseMessage(buffer)
 			if errMessage != nil {
 				log.Printf("Error while parsing message")
 			}
-			log.Println(message)
-			log.Println(message.Payload)
+			//log.Println(message)
+			//log.Println(message.Payload)
 			recordMetricError := metricService.RecordMetric(message)
 			if recordMetricError != nil {
 				log.Println("Error while recording metric message. Message: ", message, "Payload:", message.Payload)

@@ -13,6 +13,7 @@ type Repository struct {
 type IRepository interface {
 	Insert(metric *ApiMetric) error
 	GetByRouteAndTime(route string, startTime, endTime time.Time) ([]ApiMetric, error)
+	GetByTimeBetween(startTime, endTime time.Time) ([]ApiMetric, error)
 }
 
 func NewApiMetricRepository(db *gorm.DB) *Repository {
@@ -26,5 +27,11 @@ func (r *Repository) Insert(metric *ApiMetric) error {
 func (r *Repository) GetByRouteAndTime(route string, startTime, endTime time.Time) ([]ApiMetric, error) {
 	var metrics []ApiMetric
 	err := r.db.Where("route = ? AND time BETWEEN ? AND ?", route, startTime, endTime).Find(&metrics).Error
+	return metrics, err
+}
+
+func (r *Repository) GetByTimeBetween(startTime, endTime time.Time) ([]ApiMetric, error) {
+	var metrics []ApiMetric
+	err := r.db.Where("time BETWEEN ? AND ?", startTime, endTime).Find(&metrics).Error
 	return metrics, err
 }
