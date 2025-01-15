@@ -7,7 +7,9 @@ import (
 	"metrics-persistance-server/internal/boot"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -18,38 +20,37 @@ func main() {
 		panic("Failed to load config")
 	}
 
-	go handleGracefulShutdown(cancel)
+	stopChannel := make(chan struct{})
 
-	// Initialize UDP connection
-	udpErr := boot.InitializeUdpConnection(config, ctx)
+	// Initialize Service
+	udpErr := boot.Initialize(config, ctx, stopChannel)
 	if udpErr != nil {
-		log.Fatalf("Failed to create UDP connection: %v\n", udpErr)
+		log.Fatalf("Failed to Initialize Service: %v\n", udpErr)
 	}
 
-	log.Println("UDP connection successfully established.")
+	go handleGracefulShutdown(cancel, stopChannel)
+
+	log.Println("Service Initialized Successfully")
 
 	<-ctx.Done()
 	log.Println("Application shutting down.")
 }
 
-func handleGracefulShutdown(cancel context.CancelFunc) {
+func handleGracefulShutdown(cancel context.CancelFunc, stopChannel chan struct{}) {
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 
 	<-signalChan
 	log.Println("Shutdown signal received.")
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		close(stopChannel)
+	}()
+	wg.Wait()
+	bufferDuration := 5 * time.Second // Add a 5-second buffer time before cancelling context
+	time.Sleep(bufferDuration)
 	cancel()
 }
-
-//TODO: handle connection close on server shutdown
-
-//Initialize DB
-
-//Initilize repo
-
-//Initialize Services
-
-//Initialize handler
-
-// bring up the server

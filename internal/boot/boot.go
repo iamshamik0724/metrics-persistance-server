@@ -8,8 +8,12 @@ import (
 	"metrics-persistance-server/internal/message"
 	"metrics-persistance-server/internal/metrics"
 	"metrics-persistance-server/internal/metrics/repo"
+	"metrics-persistance-server/internal/websocket"
 	"net"
+	"net/http"
 	"time"
+
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
@@ -18,7 +22,7 @@ import (
 
 func InitilizeDb() {}
 
-func InitializeUdpConnection(config *config.Config, ctx context.Context) error {
+func Initialize(config *config.Config, ctx context.Context, stopChannel chan struct{}) error {
 
 	//Initialize DB
 	db, dbErr := InitializeDb(config)
@@ -42,12 +46,6 @@ func InitializeUdpConnection(config *config.Config, ctx context.Context) error {
 		return err
 	}
 
-	go func() {
-		<-ctx.Done()
-		log.Println("Context canceled. Closing UDP connection...")
-		conn.Close()
-	}()
-
 	//Send connection Init message
 	errInitMessage := sendInitMessage(conn)
 	if errInitMessage != nil {
@@ -55,8 +53,14 @@ func InitializeUdpConnection(config *config.Config, ctx context.Context) error {
 		return err
 	}
 
+	var wg sync.WaitGroup
+
+	//Waitgroup for heartbeat and consumer channel closures
+	wg.Add(2)
+
 	// Initialize heartbeat
-	go startHeartbeat(ctx, conn, config.UdpServer.HeartBeatInterval)
+	stopHeartbeatChannel := make(chan struct{})
+	go startHeartbeat(conn, config.UdpServer.HeartBeatInterval, stopHeartbeatChannel, &wg)
 
 	//Initialize repo
 	apiMetricRepo := repo.NewApiMetricRepository(db)
@@ -64,19 +68,49 @@ func InitializeUdpConnection(config *config.Config, ctx context.Context) error {
 	//Initialize Service
 	apiMetricService := metrics.NewApiMetricService(apiMetricRepo)
 
-	//Initialize consumer channel
-	go startConsumerChannel(ctx, conn, apiMetricService)
-
 	//Initialize Gin Router
 	router := gin.Default()
 
+	//Initialize and run web socket hub
+	hub := websocket.NewHub()
+	go hub.Run()
+
 	//Initialize handlers
 	metricsHandler := metrics.NewHandler(apiMetricService)
+	webSocketHandler := websocket.NewHandler(hub)
+
+	//Initialize consumer channel
+	stopConsumerChannel := make(chan struct{})
+	go startConsumerChannel(conn, apiMetricService, hub, stopConsumerChannel, &wg)
 
 	//Initialize Routes
+	router.GET("/ws", webSocketHandler.HandleConnections)
 	router.GET("/metrics", metricsHandler.GetMetrics)
 
-	router.Run(":8085")
+	srv := &http.Server{
+		Addr:    ":8085",
+		Handler: router,
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("ListenAndServe failed: %v", err)
+		}
+	}()
+
+	go func() {
+		<-stopChannel
+		close(stopHeartbeatChannel)
+		close(stopConsumerChannel)
+		wg.Wait()
+		log.Println("Context canceled. Closing UDP connection...")
+		conn.Close()
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Fatalf("HTTP server Shutdown: %v", err)
+		} else {
+			log.Println("HTTP server stopped")
+		}
+	}()
 
 	return nil
 
@@ -92,14 +126,15 @@ func sendInitMessage(conn *net.UDPConn) error {
 	return nil
 }
 
-func startHeartbeat(ctx context.Context, conn *net.UDPConn, heartBeatInterval int) {
+func startHeartbeat(conn *net.UDPConn, heartBeatInterval int, stopChannel chan struct{}, wg *sync.WaitGroup) {
 	ticker := time.NewTicker(time.Duration(heartBeatInterval) * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-ctx.Done():
-			log.Println("Stopping heartbeat...")
+		case <-stopChannel:
+			log.Println("Stopping heartbeat channel due to stop signal...")
+			wg.Done()
 			return
 		case <-ticker.C:
 			log.Println("Sending heartbeat...")
@@ -111,12 +146,13 @@ func startHeartbeat(ctx context.Context, conn *net.UDPConn, heartBeatInterval in
 	}
 }
 
-func startConsumerChannel(ctx context.Context, conn *net.UDPConn, metricService metrics.IService) {
+func startConsumerChannel(conn *net.UDPConn, metricService metrics.IService, hub *websocket.Hub, stopChannel chan struct{}, wg *sync.WaitGroup) {
 	log.Println("Starting consumer channel...")
 	for {
 		select {
-		case <-ctx.Done():
-			log.Println("Stopping consumer channel...")
+		case <-stopChannel:
+			log.Println("Stopping Consumer channel due to stop signal...")
+			wg.Done()
 			return
 		default:
 			buffer := make([]byte, 1024)
@@ -125,17 +161,15 @@ func startConsumerChannel(ctx context.Context, conn *net.UDPConn, metricService 
 				log.Printf("Error reading UDP message: %v\n", err)
 				continue
 			}
-			//log.Printf("Received message from %v: %s %d %s\n", addr, string(buffer[:n]), len(buffer), string(buffer))
 			message, errMessage := message.ParseMessage(buffer)
 			if errMessage != nil {
 				log.Printf("Error while parsing message")
 			}
-			//log.Println(message)
-			//log.Println(message.Payload)
 			recordMetricError := metricService.RecordMetric(message)
 			if recordMetricError != nil {
 				log.Println("Error while recording metric message. Message: ", message, "Payload:", message.Payload)
 			}
+			hub.SendMetricsMessage(message)
 		}
 	}
 }
