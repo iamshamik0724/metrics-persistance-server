@@ -1,6 +1,6 @@
 # Metrics Persistence Server
 
-A Go-based service for collecting, processing, and storing API performance metrics via UDP, with real-time WebSocket streaming and REST APIs for querying metrics.
+A Go-based service for collecting, processing, and storing API performance metrics received via UDP, with real-time WebSocket streaming and REST APIs for querying metrics.
 
 ---
 
