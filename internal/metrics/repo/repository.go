@@ -32,6 +32,8 @@ func (r *Repository) GetByRouteAndTime(route string, startTime, endTime time.Tim
 
 func (r *Repository) GetByTimeBetween(startTime, endTime time.Time) ([]ApiMetric, error) {
 	var metrics []ApiMetric
-	err := r.db.Where("time BETWEEN ? AND ?", startTime, endTime).Find(&metrics).Error
+	err := r.db.Where("time BETWEEN ? AND ?", startTime, endTime).
+		Order("time ASC").
+		Find(&metrics).Error
 	return metrics, err
 }

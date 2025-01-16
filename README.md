@@ -42,36 +42,19 @@ A Go-based service for collecting, processing, and storing API performance metri
   **Response Format**:
   ```json
   {
+      "timestamps": ["2025-01-15T12:00:00Z", "2025-01-15T12:01:00Z"],
       "metrics": [
           {
               "route": "/health",
               "method": "GET",
-              "timestamps": ["2025-01-15T12:00:00Z", "2025-01-15T12:01:00Z"],
-              "responses": [
-                 {
-                     "time": 150.2,
-                     "status": 200
-                 },
-                 {
-                     "time": 120.5,
-                     "status": 400
-                 }
-             ]
+              "responseTime": [150.2,120.5],
+              "responseStatus": [200,400]
           },
           {
               "route": "/api/products",
               "method": "GET",
-              "timestamps": ["2025-01-15T12:00:00Z", "2025-01-15T12:01:00Z"],
-              "responses": [
-                 {
-                     "time": 10.2,
-                     "status": 200
-                 },
-                 {
-                     "time": 120.5,
-                     "status": 200
-                 }
-             ]
+              "responseTime": [10,40],
+              "responseStatus": [200,500]
           },
       ]
   }

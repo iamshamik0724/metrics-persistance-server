@@ -40,40 +40,60 @@ func (s *Service) FetchLast10MinutesMetrics() (*Metrics, error) {
 	endTime := time.Now()
 	startTime := endTime.Add(-10 * time.Minute)
 
+	responseTimestamps := generateTimeArray(startTime, endTime)
 	apiMetrics, err := s.repo.GetByTimeBetween(startTime, endTime)
 	if err != nil {
 		return nil, fmt.Errorf("error while fetching metrics: %w", err)
 	}
 
 	metricsResponse := &Metrics{
+		Timestamps:  responseTimestamps,
 		MetricsData: []RouteMetric{},
 	}
 
-	routeMetricsMap := make(map[string]RouteMetric)
+	routeTimestampMetricsMap := make(map[string]map[time.Time]ResponseMetric)
 
 	for _, apiMetric := range apiMetrics {
-		routeKey := fmt.Sprintf("%s|%s", apiMetric.Route, apiMetric.Method)
-		if _, exists := routeMetricsMap[routeKey]; !exists {
-			routeMetricsMap[routeKey] = RouteMetric{
-				Route:      apiMetric.Route,
-				Method:     apiMetric.Method,
-				Timestamps: []time.Time{},
-				Responses:  []ResponseMetric{},
-			}
-		}
+		routeKey := fmt.Sprintf("%s - %s", apiMetric.Method, apiMetric.Route)
 
-		routeMetric := routeMetricsMap[routeKey]
-		routeMetric.Timestamps = append(routeMetric.Timestamps, apiMetric.Time)
-		routeMetric.Responses = append(routeMetric.Responses, ResponseMetric{
+		if _, exists := routeTimestampMetricsMap[routeKey]; !exists {
+			routeTimestampMetricsMap[routeKey] = make(map[time.Time]ResponseMetric)
+		}
+		routeTimestampMetricsMap[routeKey][apiMetric.Time] = ResponseMetric{
 			Time:   apiMetric.ResponseTime,
 			Status: apiMetric.StatusCode,
-		})
-		routeMetricsMap[routeKey] = routeMetric
+		}
 	}
 
-	for _, routeMetric := range routeMetricsMap {
-		metricsResponse.MetricsData = append(metricsResponse.MetricsData, routeMetric)
+	for routeKey, timeMetricMap := range routeTimestampMetricsMap {
+		responseTimes := make([]float64, len(responseTimestamps))
+		responseStatus := make([]int, len(responseTimestamps))
+
+		for i := 0; i < len(metricsResponse.Timestamps); i++ {
+			if res, exists := timeMetricMap[metricsResponse.Timestamps[i]]; exists {
+				responseTimes[i] = res.Time
+				responseStatus[i] = res.Status
+			} else {
+				responseTimes[i] = -1
+				responseStatus[i] = -1
+			}
+		}
+		metricsResponse.MetricsData = append(metricsResponse.MetricsData, RouteMetric{
+			RouteKey:     routeKey,
+			ResponseTime: responseTimes,
+			Status:       responseStatus,
+		})
 	}
 
 	return metricsResponse, nil
+}
+
+func generateTimeArray(startTime, endTime time.Time) []time.Time {
+	var timeArray []time.Time
+	startTime = startTime.Truncate(time.Second)
+	endTime = endTime.Truncate(time.Second)
+	for t := startTime; t.Before(endTime) || t.Equal(endTime); t = t.Add(1 * time.Second) {
+		timeArray = append(timeArray, t)
+	}
+	return timeArray
 }
