@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-contrib/cors"
+
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -70,6 +72,14 @@ func Initialize(config *config.Config, ctx context.Context, stopChannel chan str
 
 	//Initialize Gin Router
 	router := gin.Default()
+
+	//Cors Setup
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"}, // Frontend URL
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
 
 	//Initialize and run web socket hub
 	hub := websocket.NewHub()

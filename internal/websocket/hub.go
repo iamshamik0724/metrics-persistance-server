@@ -2,10 +2,10 @@ package websocket
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
-	"sync"
-
 	"metrics-persistance-server/internal/message"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
@@ -76,8 +76,7 @@ func (h *Hub) SendMessage(message []byte) {
 
 func (h *Hub) SendMetricsMessage(msg *message.Message) {
 	metricMessage := &MetricsBroadcastMessage{
-		Route:        msg.Payload.Route,
-		Method:       msg.Payload.Method,
+		Route:        fmt.Sprintf("%s - %s", msg.Payload.Method, msg.Payload.Route),
 		Timestamp:    msg.Timestamp,
 		ResponseTime: msg.Payload.ResponseTime,
 		Status:       msg.Payload.StatusCode,
