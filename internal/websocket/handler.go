@@ -25,12 +25,6 @@ func (h *Handler) HandleConnections(c *gin.Context) {
 		return
 	}
 	h.Hub.AddClient(conn)
-
-	successMessage := []byte("Successfully connected to WebSocket")
-	err = conn.WriteMessage(websocket.TextMessage, successMessage)
-	if err != nil {
-		log.Printf("Error sending success message to client: %v", err)
-	}
 }
 
 func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
