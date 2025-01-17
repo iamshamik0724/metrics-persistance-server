@@ -33,6 +33,15 @@ A Go-based service for collecting, processing, and storing API performance metri
 ### WebSocket API
 - **Endpoint**: `/ws`  
   Opens a WebSocket connection to stream real-time metrics.
+  **Broadcast Message Format**:
+  ```json
+  {
+    "route": "POST - /post_state",
+    "timestamp": "2025-01-15T17:32:56+05:30",
+    "time": 48.888042328106174,
+    "status": 200
+  }
+
 
 ### REST API
 - **GET `/metrics`**  
@@ -45,14 +54,12 @@ A Go-based service for collecting, processing, and storing API performance metri
       "timestamps": ["2025-01-15T12:00:00Z", "2025-01-15T12:01:00Z"],
       "metrics": [
           {
-              "route": "/health",
-              "method": "GET",
+              "route": "GET - /health",
               "responseTime": [150.2,120.5],
               "responseStatus": [200,400]
           },
           {
-              "route": "/api/products",
-              "method": "GET",
+              "route": "GET - /api/products",
               "responseTime": [10,40],
               "responseStatus": [200,500]
           },
